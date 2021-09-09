@@ -8,12 +8,13 @@ on:
       - '*/statement/index.md'
       - '*/problem.json'
       - '*/subtasks.json'
+      - 'cover.tex'
       - 'template.tex'
   workflow_dispatch:
     inputs:
         target:
             description: 'Problem labels to build'
-            default: 'AB'
+            default: '0AB'
 
 jobs:
   build:
@@ -75,29 +76,40 @@ jobs:
         id: changes
         with:
           filters: |
-            template:
-              - 'template.tex'
+            cover:
+              - 'cover.tex'
             pA:
               - 'pA/scripts/statement.sh'
               - 'pA/statement/*.jpg'
               - 'pA/statement/index.md'
               - 'pA/problem.json'
               - 'pA/subtasks.json'
+              - 'cover.tex'
+              - 'template.tex'
             pB:
               - 'pB/scripts/statement.sh'
               - 'pB/statement/*.jpg'
               - 'pB/statement/index.md'
               - 'pB/problem.json'
               - 'pB/subtasks.json'
+              - 'template.tex'
+
+      - name: Build cover
+        if: (github.event_name != 'workflow_dispatch' && steps.changes.outputs.cover == 'true') || contains(github.event.inputs.target, '0')
+        run: |
+          xelatex cover.tex
 
       - name: Build pA
-        if: (github.event_name != 'workflow_dispatch' && (steps.changes.outputs.pA == 'true' || steps.changes.outputs.template == 'true')) || contains(github.event.inputs.target, 'A')
+        if: (github.event_name != 'workflow_dispatch' && steps.changes.outputs.pA == 'true') || contains(github.event.inputs.target, 'A')
         working-directory: pA
         run: |
           tps statement
+          pdfunite ../cover.pdf statement/index.pdf statement/index-with-cover.pdf
+          rm statement/index.pdf
+          mv statement/index-with-cover.pdf statement/index.pdf
 
       - name: Build pB
-        if: (github.event_name != 'workflow_dispatch' && (steps.changes.outputs.pB == 'true' || steps.changes.outputs.template == 'true')) || contains(github.event.inputs.target, 'B')
+        if: (github.event_name != 'workflow_dispatch' && steps.changes.outputs.pB == 'true') || contains(github.event.inputs.target, 'B')
         working-directory: pB
         run: |
           tps statement
