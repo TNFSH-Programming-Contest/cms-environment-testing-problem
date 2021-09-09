@@ -1,16 +1,16 @@
 ac.cpp
 solution            compile[OK]
-0-01                sol[OK]    0.013     check[OK]        1  [Correct]             
-1-01                sol[OK]    0.014     check[OK]        1  [Correct]             
-1-02                sol[OK]    0.012     check[OK]        1  [Correct]             
-1-03                sol[OK]    0.012     check[OK]        1  [Correct]             
-1-04                sol[OK]    0.013     check[OK]        1  [Correct]             
-1-05                sol[OK]    0.013     check[OK]        1  [Correct]             
-2-01                sol[OK]    0.013     check[OK]        1  [Correct]             
-2-02                sol[OK]    0.013     check[OK]        1  [Correct]             
-2-03                sol[OK]    0.012     check[OK]        1  [Correct]             
-2-04                sol[OK]    0.012     check[OK]        1  [Correct]             
-2-05                sol[OK]    0.012     check[OK]        1  [Correct]             
+0-01                sol[OK]    0.017     check[OK]        1  [Correct]             
+1-01                sol[OK]    0.017     check[OK]        1  [Correct]             
+1-02                sol[OK]    0.015     check[OK]        1  [Correct]             
+1-03                sol[OK]    0.020     check[OK]        1  [Correct]             
+1-04                sol[OK]    0.015     check[OK]        1  [Correct]             
+1-05                sol[OK]    0.016     check[OK]        1  [Correct]             
+2-01                sol[OK]    0.016     check[OK]        1  [Correct]             
+2-02                sol[OK]    0.023     check[OK]        1  [Correct]             
+2-03                sol[OK]    0.023     check[OK]        1  [Correct]             
+2-04                sol[OK]    0.015     check[OK]        1  [Correct]             
+2-05                sol[OK]    0.016     check[OK]        1  [Correct]             
 samples             [1/1 tests]    [Correct]             [0/0 pts]      [match with expected]             0-01
 small               [5/5 tests]    [Correct]             [87/87 pts]    [match with expected]             1-01
 all                 [5/5 tests]    [Correct]             [13/13 pts]    [match with expected]             2-01
