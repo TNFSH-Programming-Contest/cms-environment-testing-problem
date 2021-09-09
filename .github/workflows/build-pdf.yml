@@ -8,7 +8,6 @@ on:
       - '*/statement/index.md'
       - '*/problem.json'
       - '*/subtasks.json'
-      - 'cover.pdf'
       - 'template.tex'
   workflow_dispatch:
     inputs:
@@ -106,7 +105,7 @@ jobs:
       - name: Merge pdfs
         run: |
           mkdir -p pA/attachments
-          pdfunite cover.pdf pA/statement/index.pdf pB/statement/index.pdf pA/attachments/problems.pdf
+          pdfunite pA/statement/index.pdf pB/statement/index.pdf pA/attachments/problems.pdf
 
       - name: Commit pdf
         run: |
