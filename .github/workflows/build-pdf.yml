@@ -1,0 +1,121 @@
+name: Build pdf
+
+on:
+  push:
+    paths:
+      - '*/scripts/statement.sh'
+      - '*/statement/*.jpg'
+      - '*/statement/index.md'
+      - '*/problem.json'
+      - '*/subtasks.json'
+      - 'cover.pdf'
+      - 'template.tex'
+  workflow_dispatch:
+    inputs:
+        target:
+            description: 'Problem labels to build'
+            default: 'AB'
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install tps
+        run: |
+          git clone https://github.com/ioi-2017/tps.git
+          cd tps && sudo ./install-tps.sh
+
+      - name: Install pandoc
+        run: |
+          wget https://github.com/jgm/pandoc/releases/download/2.10.1/pandoc-2.10.1-1-amd64.deb
+          sudo dpkg -i pandoc-2.10.1-1-amd64.deb
+
+      - name: Install xetex
+        run: |
+          sudo add-apt-repository ppa:jonathonf/texlive-2019
+          sudo apt-get update
+          sudo apt-get install texlive-xetex
+
+      - name: Install fonts
+        run: |
+          sudo mkdir -p /usr/share/fonts/opentype/noto
+          wget -nv https://noto-website-2.storage.googleapis.com/pkgs/NotoSansCJK-Regular.ttc.zip
+          unzip NotoSansCJK-Regular.ttc.zip -d NotoSansCJK-Regular
+          ls -al NotoSansCJK-Regular
+          sudo cp NotoSansCJK-Regular/NotoSansCJK-Regular.ttc /usr/share/fonts/opentype/noto
+          wget -nv https://noto-website-2.storage.googleapis.com/pkgs/NotoSansCJK-Bold.ttc.zip
+          unzip NotoSansCJK-Bold.ttc.zip -d NotoSansCJK-Bold
+          ls -al NotoSansCJK-Bold
+          sudo cp NotoSansCJK-Bold/NotoSansCJK-Bold.ttc /usr/share/fonts/opentype/noto
+          ls -al /usr/share/fonts/opentype/noto
+          sudo fc-cache -f -v
+
+      - name: Install pdfunite
+        run: |
+          sudo apt-get install poppler-utils
+
+      - name: Check environment
+        working-directory: pA
+        run: |
+          lsb_release -a
+          echo ""
+          pandoc -v
+          echo ""
+          xetex -v
+          echo ""
+          tps || :;
+          echo ""
+          fc-list | grep "Noto Sans Mono CJK TC" || :;
+          echo ""
+          pdfunite -v
+
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            template:
+              - 'template.tex'
+            pA:
+              - 'pA/scripts/statement.sh'
+              - 'pA/statement/*.jpg'
+              - 'pA/statement/index.md'
+              - 'pA/problem.json'
+              - 'pA/subtasks.json'
+            pB:
+              - 'pB/scripts/statement.sh'
+              - 'pB/statement/*.jpg'
+              - 'pB/statement/index.md'
+              - 'pB/problem.json'
+              - 'pB/subtasks.json'
+
+      - name: Build pA
+        if: (github.event_name != 'workflow_dispatch' && (steps.changes.outputs.pA == 'true' || steps.changes.outputs.template == 'true')) || contains(github.event.inputs.target, 'A')
+        working-directory: pA
+        run: |
+          tps statement
+
+      - name: Build pB
+        if: (github.event_name != 'workflow_dispatch' && (steps.changes.outputs.pB == 'true' || steps.changes.outputs.template == 'true')) || contains(github.event.inputs.target, 'B')
+        working-directory: pB
+        run: |
+          tps statement
+
+      - name: Merge pdfs
+        run: |
+          mkdir -p pA/attachments
+          pdfunite cover.pdf pA/statement/index.pdf pB/statement/index.pdf pA/attachments/problems.pdf
+
+      - name: Commit pdf
+        run: |
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git status
+          git add pA/statement/index.pdf
+          git add pB/statement/index.pdf
+          git add pA/attachments/problems.pdf
+          git pull
+          git diff-index --quiet HEAD -- || git commit -m "Build pdf"
+          git push

@@ -1,0 +1,11 @@
+*.exe
+*.o
+*.zip
+__pycache__/
+logs/
+sandbox/
+*/checker/checker
+template.aux
+template.fdb_latexmk
+template.fls
+template.log

@@ -1,0 +1,52 @@
+name: Run solutions
+
+on:
+  workflow_dispatch:
+    inputs:
+        target:
+            description: 'Problem labels to build'
+            default: 'AB'
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get install dos2unix python3-setuptools
+          sudo python3 -m pip install psutil
+
+      - name: Setup git
+        run: |
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+      - name: Install tps
+        run: |
+          git clone https://github.com/ioi-2017/tps.git
+          cd tps && sudo ./install-tps.sh
+
+      - name: Run pA
+        if: contains(github.event.inputs.target, 'A')
+        working-directory: pA
+        run: |
+          rm -f solutions-check.txt
+          tps solutions | tee -a solutions-check.txt
+          git add solutions-check.txt
+
+      - name: Run pB
+        if: contains(github.event.inputs.target, 'B')
+        working-directory: pB
+        run: |
+          rm -f solutions-check.txt
+          tps solutions | tee -a solutions-check.txt
+          git add solutions-check.txt
+
+      - name: Commit tests
+        run: |
+          git pull
+          git diff --cached --quiet || git commit -m "Run solutions"
+          git push

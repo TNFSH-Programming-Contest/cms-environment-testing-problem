@@ -1,0 +1,85 @@
+name: Build tests
+
+on:
+  push:
+    paths:
+      - '*/solution/**'
+      - '*/problem.json'
+      - '*/solutions.json'
+      - '*/subtasks.json'
+  workflow_dispatch:
+    inputs:
+        target:
+            description: 'Problem labels to build'
+            default: 'AB'
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get install dos2unix python3-setuptools
+          sudo python3 -m pip install psutil
+
+      - name: Setup git
+        run: |
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+      - name: Install tps
+        run: |
+          git clone https://github.com/ioi-2017/tps.git
+          cd tps && sudo ./install-tps.sh
+
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            pA:
+              - 'pA/gen/**'
+              - 'pA/solution/**'
+              - 'pA/problem.json'
+              - 'pA/solutions.json'
+              - 'pA/subtasks.json'
+            pB:
+              - 'pB/gen/**'
+              - 'pB/solution/**'
+              - 'pB/problem.json'
+              - 'pB/solutions.json'
+              - 'pB/subtasks.json'
+
+      - name: Build pA
+        if: (github.event_name != 'workflow_dispatch' && steps.changes.outputs.pA == 'true') || contains(github.event.inputs.target, 'A')
+        working-directory: pA
+        run: |
+          tps gen -s --no-gen
+          git add tests/*.in
+          git add tests/*.out
+          git add tests/gen_summary
+          git add tests/mapping
+          rm -f solutions-check.txt
+          tps solutions | tee -a solutions-check.txt
+          git add solutions-check.txt
+
+      - name: Build pB
+        if: (github.event_name != 'workflow_dispatch' && steps.changes.outputs.pB == 'true') || contains(github.event.inputs.target, 'B')
+        working-directory: pB
+        run: |
+          tps gen -s --no-gen
+          git add tests/*.in
+          git add tests/*.out
+          git add tests/gen_summary
+          git add tests/mapping
+          rm -f solutions-check.txt
+          tps solutions | tee -a solutions-check.txt
+          git add solutions-check.txt
+
+      - name: Commit tests
+        run: |
+          git pull
+          git diff --cached --quiet || git commit -m "Build tests"
+          git push
