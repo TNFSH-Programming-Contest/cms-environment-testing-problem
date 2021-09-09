@@ -1,4 +1,4 @@
-# ABC體操
+# Piñata
 
 \begin{figure}[h]
 \centering
