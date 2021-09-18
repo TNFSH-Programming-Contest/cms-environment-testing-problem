@@ -14,7 +14,7 @@ on:
     inputs:
         target:
             description: 'Problem labels to build'
-            default: '0AB'
+            default: 'AB'
 
 jobs:
   build:
@@ -76,8 +76,6 @@ jobs:
         id: changes
         with:
           filters: |
-            cover:
-              - 'cover.tex'
             pA:
               - 'pA/scripts/statement.sh'
               - 'pA/statement/*.jpg'
@@ -94,19 +92,16 @@ jobs:
               - 'pB/subtasks.json'
               - 'template.tex'
 
-      - name: Build cover
-        if: (github.event_name != 'workflow_dispatch' && steps.changes.outputs.cover == 'true') || contains(github.event.inputs.target, '0')
-        run: |
-          xelatex cover.tex
-
       - name: Build pA
         if: (github.event_name != 'workflow_dispatch' && steps.changes.outputs.pA == 'true') || contains(github.event.inputs.target, 'A')
-        working-directory: pA
         run: |
+          xelatex cover.tex
+          cd pA
           tps statement
-          pdfunite ../cover.pdf statement/index.pdf statement/index-with-cover.pdf
-          rm statement/index.pdf
-          mv statement/index-with-cover.pdf statement/index.pdf
+          cd ..
+          pdfunite cover.pdf pA/statement/index.pdf pA/statement/index-with-cover.pdf
+          rm pA/statement/index.pdf
+          mv pA/statement/index-with-cover.pdf pA/statement/index.pdf
 
       - name: Build pB
         if: (github.event_name != 'workflow_dispatch' && steps.changes.outputs.pB == 'true') || contains(github.event.inputs.target, 'B')
