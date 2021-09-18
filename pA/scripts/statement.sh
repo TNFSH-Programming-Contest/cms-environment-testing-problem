@@ -9,5 +9,13 @@ echo "Compiling ${CONTEST_NAME} - ${PROBLEM_LABEL}. ${PROBLEM_NAME} (${PROBLEM_I
 
 pandoc --metadata-file="${BASE_DIR}/subtask-pandoc.json" --metadata-file="${BASE_DIR}/problem.json" -M statement_path="${STATEMENT_DIR}" -T "" "${STATEMENT_DIR}/index.md" -o "${STATEMENT_DIR}/index.pdf" --template "${BASE_DIR}/../template.tex" --resource-path "${STATEMENT_DIR}" -f markdown -t latex -s --pdf-engine=xelatex
 
-echo "Compile Finish"
+exit_code=$?
+if [ $exit_code -ne 0 ]; then
+	echo "Compile Failed"
+else
+	echo "Compile Finish"
+fi
+
 rm "${BASE_DIR}/subtask-pandoc.json"
+
+exit $exit_code
