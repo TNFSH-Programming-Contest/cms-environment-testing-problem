@@ -5,6 +5,8 @@ on:
     paths:
       - 'pA/**'
       - 'pB/**'
+    tags-ignore:
+      - '**'
   workflow_dispatch:
 
 jobs:
