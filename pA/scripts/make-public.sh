@@ -14,14 +14,16 @@ function fix() {
 	cecho yellow -n "fix: "
 	echo "$@"
 	check_file_exists "file" "${public}/$1"
-	dos2unix -q "${public}/$1" > /dev/null
+	dos2unix -q "${public}/$1" > "/dev/null"
 }
 
 function pgg() {
 	cecho yellow -n "pgg: "
 	echo "$@"
-	check_file_exists "file" "${grader}/$1"
-	"${PYTHON}" "${INTERNALS}/pgg.py" < "${grader}/$1" > "${public}/$1"
+	local -r input_grader="${grader}/$1"
+	local -r output_grader="${public}/$1"
+	check_file_exists "file" "${input_grader}"
+	"${PYTHON}" "${INTERNALS}/pgg.py" "${input_grader}" "${output_grader}"
 	fix "$@"
 }
 
@@ -46,7 +48,7 @@ function replace_tokens {
 
 sensitive check_file_exists "Public package description file" "${public_files}"
 
-pushd "${PUBLIC_DIR}" > /dev/null
+pushdq "${PUBLIC_DIR}"
 
 while read raw_line; do
 	line=$(echo ${raw_line} | replace_tokens | xargs)
@@ -80,7 +82,7 @@ while read raw_line; do
 			cecho yellow -n "copy: "
 			echo "${relative_public_input}"
 			cp "${generated_input}" "${absolute_public_input}"
-			dos2unix -q "${absolute_public_input}" > /dev/null
+			dos2unix -q "${absolute_public_input}" > "/dev/null"
 		done
 		continue
 	fi
@@ -120,7 +122,7 @@ while read raw_line; do
 	echo "${file}"
 done < "${public_files}" | zip -@ "${attachment_name}"
 
-popd > /dev/null
+popdq
 
 mv "${PUBLIC_DIR}/${attachment_name}" "${BASE_DIR}/"
 

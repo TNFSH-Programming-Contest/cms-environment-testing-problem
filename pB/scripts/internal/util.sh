@@ -16,13 +16,13 @@ function extension {
 }
 
 function variable_exists {
-	varname=$1
-	[ -n "${!varname+x}" ]
+	local -r varname="$1"; shift
+	declare -p "${varname}" &> "/dev/null"
 }
 
 function variable_not_exists {
-	varname=$1
-	[ -z "${!varname+x}" ]
+	local -r varname="$1"; shift
+	! variable_exists "${varname}"
 }
 
 function check_variable {
@@ -76,8 +76,17 @@ function py_test {
 }
 
 
+function pushdq {
+	pushd "$@" > "/dev/null"
+}
+
+function popdq {
+	popd "$@" > "/dev/null"
+}
+
+
 function are_same {
-	diff "$1" "$2" > /dev/null 2>&1
+	diff "$1" "$2" &> "/dev/null"
 }
 
 function recreate_dir {
@@ -454,67 +463,94 @@ function check_executable_exists {
 
 
 function command_exists {
-	command -v "$1" >/dev/null 2>&1
+	command -v "$1" &> "/dev/null"
 }
 
-function invalid_arg {
-	errcho "Error at argument '${curr}':" "$@"
+
+# This is a commonly used function as an invalid_arg_callback for argument_parser.
+# It assumes that a "usage" function is already defined and available during the argument parsing.
+function invalid_arg_with_usage {
+	local -r curr_arg="$1"; shift
+	errcho "Error at argument '${curr_arg}':" "$@"
 	usage
 	exit 2
 }
 
-# Fetches the value of an option, while parsing the arguments of the command
+# Fetches the value of an option, while parsing the arguments of a command.
 # ${curr} denotes the current token
 # ${next} denotes the next token when ${next_available} is "true"
 # the next token is allowed to be used when ${can_use_next} is "true"
 function fetch_arg_value {
-	local variable_name="$1"; shift
-	local short_name="$1"; shift
-	local long_name="$1"; shift
-	local argument_name="$1"
+	local -r __fav_local__variable_name="$1"; shift
+	local -r __fav_local__short_name="$1"; shift
+	local -r __fav_local__long_name="$1"; shift
+	local -r __fav_local__argument_name="$1"; shift
 
-	local fetched_arg_value=""
-	if [ "${curr}" == "${short_name}" ]; then
+	local __fav_local__fetched_arg_value
+	local __fav_local__is_fetched="false"
+	if [ "${curr}" == "${__fav_local__short_name}" ]; then
 		if "${can_use_next}" && "${next_available}"; then
-			fetched_arg_value="${next}"
-			shifts=1
+			__fav_local__fetched_arg_value="${next}"
+			__fav_local__is_fetched="true"
+			increment "arg_shifts"
 		fi
 	else
-		fetched_arg_value="${curr#${long_name}=}"
+		__fav_local__fetched_arg_value="${curr#${__fav_local__long_name}=}"
+		__fav_local__is_fetched="true"
 	fi
-	if [ -n "${fetched_arg_value}" ]; then
-		eval "${variable_name}='${fetched_arg_value}'"
+	if "${__fav_local__is_fetched}"; then
+		set_variable "${__fav_local__variable_name}" "${__fav_local__fetched_arg_value}"
 	else
-		invalid_arg "missing ${argument_name}"
+		"${invalid_arg_callback}" "${curr}" "missing ${__fav_local__argument_name}"
 	fi
 }
 
-# Fetches the value of the next argument, while parsing the arguments of the command
+function fetch_nonempty_arg_value {
+	fetch_arg_value "$@"
+	local -r __fnav_local__variable_name="$1"; shift
+	local -r __fnav_local__short_name="$1"; shift
+	local -r __fnav_local__long_name="$1"; shift
+	local -r __fnav_local__argument_name="$1"; shift
+	[ -n "${!__fnav_local__variable_name}" ] ||
+		"${invalid_arg_callback}" "${curr}" "Given ${__fnav_local__argument_name} shall not be empty."
+}
+
+# Fetches the value of the next argument, while parsing the arguments of a command.
 # ${curr} denotes the current token
 # ${next} denotes the next token when ${next_available} is "true"
 # the next token is allowed to be used when ${can_use_next} is "true"
 function fetch_next_arg {
-	local variable_name="$1"; shift
-	local short_name="$1"; shift
-	local long_name="$1"; shift
-	local argument_name="$1"; shift
+	local -r __fna_local__variable_name="$1"; shift
+	local -r __fna_local__short_name="$1"; shift
+	local -r __fna_local__long_name="$1"; shift
+	local -r __fna_local__argument_name="$1"; shift
+
 	if "${can_use_next}" && "${next_available}"; then
-		shifts=1
-		eval "${variable_name}='${next}'"
+		increment "arg_shifts"
+		set_variable "${__fna_local__variable_name}" "${next}"
 	else
-		invalid_arg "missing ${argument_name}"
+		"${invalid_arg_callback}" "${curr}" "missing ${__fna_local__argument_name}"
 	fi
 }
 
-# Parses arguments of the command
-# two callbacks should be provided in order to handle positional args and options
-# variables ${curr}, ${next}, ${next_available}, and ${can_use_next} are provided to callbacks
+# This function parses the given arguments of a command.
+# Three callback functions shall be given before passing the command arguments:
+# * handle_positional_arg_callback: for handling the positional arguments
+#   arguments: the current command argument
+# * handle_option_callback: for handling the optional arguments
+#   arguments: the current command argument (after separating the concatenated optional arguments, e.g. -abc --> -a -b -c)
+# * invalid_arg_callback: for handling the errors in arguments
+#   arguments: the current command argument & error message
+# Variables ${curr}, ${next}, ${next_available}, and ${can_use_next} are provided to callbacks.
 function argument_parser {
-	handle_positional_arg_callback="$1"; shift
-	handle_option_callback="$1"; shift
+	local -r handle_positional_arg_callback="$1"; shift
+	local -r handle_option_callback="$1"; shift
+	local -r invalid_arg_callback="$1"; shift
 
+	local -i arg_shifts
+	local curr next_available next can_use_next concatenated_option_chars
 	while [ $# -gt 0 ]; do
-		shifts=0
+		arg_shifts=0
 		curr="$1"; shift
 		next_available="false"
 		if [ $# -gt 0 ]; then
@@ -524,27 +560,27 @@ function argument_parser {
 
 		if [[ "${curr}" == --* ]]; then
 			can_use_next="true"
-			"${handle_option_callback}"
+			"${handle_option_callback}" "${curr}"
 		elif [[ "${curr}" == -* ]]; then
 			if [ "${#curr}" == 1 ]; then
-				invalid_arg "invalid argument"
+				"${invalid_arg_callback}" "${curr}" "invalid argument"
 			else
-				temp="${curr#-}"
-				while [ -n "${temp}" ]; do
+				concatenated_option_chars="${curr#-}"
+				while [ -n "${concatenated_option_chars}" ]; do
 					can_use_next="false"
-					if [ "${#temp}" -eq 1 ]; then
+					if [ "${#concatenated_option_chars}" -eq 1 ]; then
 						can_use_next="true"
 					fi
-					curr="-${temp:0:1}"
-					"${handle_option_callback}"
-					temp="${temp:1}"
+					curr="-${concatenated_option_chars:0:1}"
+					"${handle_option_callback}" "${curr}"
+					concatenated_option_chars="${concatenated_option_chars:1}"
 				done
 			fi
 		else
-			"${handle_positional_arg_callback}"
+			"${handle_positional_arg_callback}" "${curr}"
 		fi
 
-		shift "${shifts}"
+		shift "${arg_shifts}"
 	done
 }
 
